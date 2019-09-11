@@ -19,6 +19,12 @@ func New() *Parser {
 
 // SetCode is change the code
 func (p *Parser) SetCode(code string) {
+	// remove comment
+	index := strings.Index(code, "//")
+	if index != -1 {
+		code = code[:index]
+	}
+
 	p.code = code
 }
 

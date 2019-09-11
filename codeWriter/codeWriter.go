@@ -1,11 +1,14 @@
 package codeWriter
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/ShrimpF/vmTranslator/enum"
+	"github.com/ShrimpF/vmTranslator/parser"
 )
 
 // arithmeticID -- indentify each jpm-label
@@ -16,17 +19,74 @@ var callID int
 
 // CodeWriter -
 type CodeWriter struct {
+	path     string
 	fileName string
 	writer   *os.File
 }
 
 // New -- create CodeWriter
-func New(name string, w *os.File) *CodeWriter {
-	return &CodeWriter{fileName: name, writer: w}
+func New(path string, w *os.File) *CodeWriter {
+	return &CodeWriter{path: path, fileName: filepath.Base(path), writer: w}
+}
+
+// SetFileNameAndPath is
+func (cw *CodeWriter) SetFileNameAndPath(path string) {
+	cw.fileName = filepath.Base(path)
+	cw.path = path
+}
+
+// Init -- write init code
+func (cw *CodeWriter) Init() {
+	cw.Write("@256")
+	cw.Write("D=A")
+	cw.Write("@SP")
+	cw.Write("M=D")
+	cw.WriteCall("Sys.init", 0)
+}
+
+// Translate is
+func (cw *CodeWriter) Translate() {
+	readFile, err := os.Open(cw.path)
+	if err != nil {
+		panic(err)
+	}
+	defer readFile.Close()
+
+	p := parser.New()
+
+	scan := bufio.NewScanner(readFile)
+	for scan.Scan() {
+		if scan.Text() == "" {
+			continue
+		}
+
+		p.SetCode(scan.Text())
+
+		switch p.CommandType() {
+		case enum.CPush:
+			cw.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
+		case enum.CPop:
+			cw.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
+		case enum.CArithmetic:
+			cw.WriteArithmetic(p.Operation())
+		case enum.CLabel:
+			cw.WriteLabel(p.Arg1())
+		case enum.CGoto:
+			cw.WriteGoto(p.Arg1())
+		case enum.CIf:
+			cw.WriteIf(p.Arg1())
+		case enum.CFunction:
+			cw.WriteFunc(p.Arg1(), p.Arg2())
+		case enum.CCall:
+			cw.WriteCall(p.Arg1(), p.Arg2())
+		case enum.CReturn:
+			cw.WriteReturn()
+		}
+	}
 }
 
 func (cw *CodeWriter) Write(code string) {
-	fmt.Fprint(cw.writer, code+"\n")
+	fmt.Fprintln(cw.writer, code)
 }
 
 // WriteArithmetic -- write results of arithmetic operation
