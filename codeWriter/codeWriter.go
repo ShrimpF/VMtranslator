@@ -29,13 +29,13 @@ func New(path string, w *os.File) *CodeWriter {
 	return &CodeWriter{path: path, fileName: filepath.Base(path), writer: w}
 }
 
-// SetFileNameAndPath is
+// SetFileNameAndPath is set fileName and path based on path
 func (cw *CodeWriter) SetFileNameAndPath(path string) {
 	cw.fileName = filepath.Base(path)
 	cw.path = path
 }
 
-// Init -- write init code
+// Init -- write init code. This is only used for translating mutiple files.
 func (cw *CodeWriter) Init() {
 	cw.Write("@256")
 	cw.Write("D=A")
@@ -44,8 +44,9 @@ func (cw *CodeWriter) Init() {
 	cw.WriteCall("Sys.init", 0)
 }
 
-// Translate is
+// Translate is translate a .vm-file into .asm-file.
 func (cw *CodeWriter) Translate() {
+
 	readFile, err := os.Open(cw.path)
 	if err != nil {
 		panic(err)
